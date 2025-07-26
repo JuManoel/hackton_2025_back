@@ -148,7 +148,11 @@
         const API_CONFIG = {
             apiKey: "YjdhZDQ1YmM0ODc0NDM3MzhlNzM3MDliNTJhMTEyZWYtMTc1MzQxOTk0OQ==",
             serverUrl: "https://api.heygen.com",
-            localApiUrl: "http://localhost:8000/api/message/chat"
+            baseUrl: "http://localhost:8000/api",
+            endpoints: {
+                chats: "/chat",
+                messages: "/message"
+            }
         };
 
         // Global variables
@@ -159,6 +163,7 @@
         let sessionToken = null;
         let isAvatarConnected = false;
         let isStreaming = false;
+        let currentChatId = null;
 
         // Speech Recognition variables
         let recognition = null;
@@ -307,6 +312,104 @@
                 .replace(/\n/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim();
+        }
+
+        // === FUNCIONES DE GESTIÓN DINÁMICA DE CHATS ===
+        
+        // Crear nuevo chat
+        async function createNewChat() {
+            try {
+                updateDebug("Creando nuevo chat...");
+                
+                const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.chats}/`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    currentChatId = data.data.id;
+                    updateDebug(`Nuevo chat creado: ${currentChatId}`);
+                    updateAvatarStatus(`Chat activo: ${currentChatId.slice(-6)}`, 'success');
+                    
+                    // Limpiar mensajes anteriores
+                    messagesList.innerHTML = `
+                        <div class="flex justify-start">
+                            <div class="max-w-[80%] bg-orange-500 text-white p-3 rounded-lg rounded-bl-sm">
+                                <div class="font-semibold text-sm mb-1">Johan - IngeLean</div>
+                                <div>¡Hola! Nuevo chat creado. ¿En qué puedo ayudarte hoy? 😊</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    return true;
+                } else {
+                    throw new Error(data.message || 'Error al crear chat');
+                }
+            } catch (error) {
+                updateDebug(`Error al crear chat: ${error.message}`);
+                updateAvatarStatus("Error al crear chat", 'error');
+                return false;
+            }
+        }
+
+        // Cargar historial del chat
+        async function loadChatHistory(chatId) {
+            try {
+                updateDebug(`Cargando historial del chat: ${chatId}`);
+                
+                const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.messages}/chat/${chatId}`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data.length > 0) {
+                    // Limpiar mensajes actuales
+                    messagesList.innerHTML = '';
+                    
+                    // Mostrar historial
+                    data.data.forEach(message => {
+                        addMessage(message.content, message.role, false);
+                    });
+                    
+                    updateDebug(`Historial cargado: ${data.total} mensajes`);
+                } else {
+                    // Chat sin historial - mostrar mensaje de bienvenida
+                    messagesList.innerHTML = `
+                        <div class="flex justify-start">
+                            <div class="max-w-[80%] bg-orange-500 text-white p-3 rounded-lg rounded-bl-sm">
+                                <div class="font-semibold text-sm mb-1">Johan - IngeLean</div>
+                                <div>¡Hola! ¿En qué puedo ayudarte hoy? 😊</div>
+                            </div>
+                        </div>
+                    `;
+                    updateDebug(`Chat sin historial: ${chatId}`);
+                }
+            } catch (error) {
+                updateDebug(`Error al cargar historial: ${error.message}`);
+            }
+        }
+
+        // Verificar conexión y obtener/crear chat
+        async function initializeChat() {
+            try {
+                // Verificar conexión al servidor
+                const healthResponse = await fetch(`${API_CONFIG.baseUrl.replace('/api', '')}/health`);
+                const healthData = await healthResponse.json();
+                
+                if (healthData.status === 'healthy') {
+                    updateDebug("Conexión al servidor exitosa");
+                    updateAvatarStatus("Servidor conectado - Creando chat...", 'success');
+                    
+                    // Crear nuevo chat automáticamente
+                    await createNewChat();
+                    return true;
+                } else {
+                    throw new Error('Servidor no saludable');
+                }
+            } catch (error) {
+                updateDebug(`Error de conexión: ${error.message}`);
+                updateAvatarStatus("Error de conexión al servidor", 'error');
+                return false;
+            }
         }
 
         // Get session token for HeyGen
@@ -461,6 +564,14 @@
             const text = taskInput.value.trim();
             if (!text || isStreaming) return;
 
+            // Verificar que hay un chat activo
+            if (!currentChatId) {
+                updateDebug("No hay chat activo, creando uno nuevo...");
+                if (!(await createNewChat())) {
+                    return;
+                }
+            }
+
             isStreaming = true;
             taskInput.value = "";
             
@@ -474,10 +585,15 @@
             let fullResponse = '';
 
             try {
-                // Start streaming from local API
-                const response = await fetch(API_CONFIG.localApiUrl, {
+                updateDebug(`Enviando mensaje al chat ${currentChatId}: ${text.substring(0, 50)}...`);
+                
+                // Usar la API dinámica con el chat ID
+                const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.messages}/chat/${currentChatId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'text/event-stream'
+                    },
                     body: JSON.stringify({ content: text })
                 });
 
@@ -506,29 +622,31 @@
                                 if (parsedData.type === 'content') {
                                     fullResponse += parsedData.content;
                                     responseContainer.textContent = fullResponse;
+                                    responseContainer.classList.remove('typing-indicator');
                                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                                 } else if (parsedData.type === 'done') {
                                     // Streaming completed, send to avatar
-                                    updateDebug("Streaming completado, enviando al avatar...");
+                                    updateDebug(`Respuesta completada (${fullResponse.length} caracteres)`);
                                     if (isAvatarConnected && fullResponse) {
                                         await sendToAvatar(fullResponse);
                                     }
+                                    break;
                                 } else if (parsedData.type === 'error') {
                                     throw new Error(parsedData.error);
                                 }
-                            } catch (e) {
-                                if (data !== '[DONE]') {
-                                    console.error('Error parsing JSON:', e);
-                                }
+                            } catch (parseError) {
+                                updateDebug(`Error al parsear chunk: ${parseError.message}`);
                             }
                         }
                     }
                 }
 
+                updateDebug(`Mensaje procesado exitosamente en chat ${currentChatId}`);
+
             } catch (error) {
-                console.error('Error:', error);
-                responseContainer.textContent = `Error: ${error.message}`;
                 updateDebug(`Error en streaming: ${error.message}`);
+                responseContainer.textContent = `Error: ${error.message}`;
+                responseContainer.classList.remove('typing-indicator');
             } finally {
                 isStreaming = false;
                 streamingStatus.classList.add('hidden');
@@ -572,6 +690,7 @@
         // Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
             initializeSpeechRecognition();
+            initializeChat(); // Inicializar el sistema de chat dinámico
             
             // Toggle debug view on triple click
             let clickCount = 0;

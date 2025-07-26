@@ -20,15 +20,32 @@ class ControllerChat:
         """Configura las rutas del controlador"""
         
         @self.router.post("/")
-        async def create_chat(request: ChatCreateRequest):
+        async def create_chat():
             """Crea un nuevo chat"""
-            result = self.service.create_chat(request.title)
+            result = self.service.create_chat()
             
             if result["success"]:
                 return {
                     "status": "success",
                     "data": result["data"],
                     "message": result["message"]
+                }
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=result["error"]
+                )
+        
+        @self.router.get("/")
+        async def get_all_chats():
+            """Obtiene todos los chats con información de último mensaje"""
+            result = self.service.get_all_chats()
+            
+            if result["success"]:
+                return {
+                    "status": "success",
+                    "data": result["data"],
+                    "total": result["total"]
                 }
             else:
                 raise HTTPException(

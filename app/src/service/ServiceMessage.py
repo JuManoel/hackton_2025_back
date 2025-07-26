@@ -5,6 +5,7 @@ from app.src.repository.RepositoryMessage import RepositoryMessage
 from app.src.repository.RepositoryChat import RepositoryChat
 from API.Gemini import Gemini
 from API.Mistral import MistralAPI
+import asyncio
 
 
 class ServiceMessage:
@@ -13,8 +14,80 @@ class ServiceMessage:
         self.chat_repository = RepositoryChat()
         self.model = Gemini()
     
+    async def create_message_with_response_streaming(self, chat_id: str, content: str):
+        """Crea un mensaje y genera respuesta en streaming, guardando en BD de forma asíncrona"""
+        try:
+            # Verificar que el chat existe
+            chat = self.chat_repository.get_chat_by_id(chat_id)
+            if not chat:
+                raise ValueError("Chat no encontrado")
+            
+            # Obtener historial de mensajes para contexto
+            history = self.message_repository.get_messages_by_chat_id(chat_id)
+            
+            # Crear el mensaje del usuario inmediatamente
+            user_message = Message(role="user", content=content, chat_id=ObjectId(chat_id))
+            created_user_message = self.message_repository.create_message(user_message)
+            
+            # Preparar contexto para el modelo
+            history_dict = []
+            for msg in history:
+                history_dict.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+            
+            # Agregar el mensaje actual al contexto
+            history_dict.append({
+                "role": "user",
+                "content": content
+            })
+            
+            # Generar respuesta (streaming)
+            if len(history_dict) == 1:  # Primer mensaje
+                result = self.model.responder_pregunta(content)
+            else:
+                result = self.model.responder_pregunta_con_contexto(content, history_dict[:-1])
+            
+            # Preparar para recopilar la respuesta completa
+            complete_response = ""
+            
+            # Generar chunks y recopilar respuesta
+            for chunk in result:
+                if chunk.text:
+                    complete_response += chunk.text
+                    yield {
+                        "content": chunk.text,
+                        "type": "content",
+                        "user_message_id": str(created_user_message._id)
+                    }
+            
+            # Guardar respuesta del asistente de forma asíncrona (no bloquea el streaming)
+            asyncio.create_task(self._save_assistant_message_async(chat_id, complete_response))
+            
+            # Señal de finalización
+            yield {
+                "content": "",
+                "type": "done",
+                "user_message_id": str(created_user_message._id)
+            }
+            
+        except Exception as e:
+            yield {
+                "error": str(e),
+                "type": "error"
+            }
+    
+    async def _save_assistant_message_async(self, chat_id: str, content: str):
+        """Guarda el mensaje del asistente de forma asíncrona"""
+        try:
+            assistant_message = Message(role="assistant", content=content, chat_id=ObjectId(chat_id))
+            self.message_repository.create_message(assistant_message)
+        except Exception as e:
+            print(f"Error al guardar mensaje del asistente: {e}")
+    
     def create_message(self, chat_id: str, content: str) -> Dict:
-        """Crea un nuevo mensaje en un chat"""
+        """Crea un nuevo mensaje en un chat (versión síncrona para compatibilidad)"""
         try:
             # Verificar que el chat existe
             chat = self.chat_repository.get_chat_by_id(chat_id)
@@ -25,27 +98,10 @@ class ServiceMessage:
                     "message": "El chat especificado no existe"
                 }
             
-            history = self.message_repository.get_messages_by_chat_id(chat_id)
-
-
             # Crear el mensaje
             message = Message(role="user", content=content, chat_id=ObjectId(chat_id))
             created_message = self.message_repository.create_message(message)
             
-            #generar respuesta por el utilizando Modelo
-            if not history:
-                respuesta = self.model.responder_pregunta(content)
-            else:
-                history_dict = []
-                for msg in history:
-                    history_dict.append({
-                        "role": msg.role,
-                        "content": msg.content
-                    })
-                respuesta = self.model.responder_pregunta_con_contexto(content, history_dict)
-
-            message = Message(role="model", content=respuesta, chat_id=ObjectId(chat_id))
-
             return {
                 "success": True,
                 "data": {
