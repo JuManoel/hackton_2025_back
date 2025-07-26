@@ -19,7 +19,7 @@ class DatabaseConnection:
     def connect(self):
         """Establece la conexión con MongoDB"""
         try:
-            mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+            mongo_url = os.getenv("MONGO_URL")
             self._client = MongoClient(mongo_url)
             self._database = self._client["hackaton_chat"]
             print("Conexión a MongoDB establecida correctamente")

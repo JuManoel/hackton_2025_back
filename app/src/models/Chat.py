@@ -17,7 +17,7 @@ class Chat:
     @classmethod
     def from_dict(cls, data: dict):
         """Crea un objeto Chat desde un diccionario de MongoDB"""
-        chat = cls(data.get("title", "Nuevo Chat"))
+        chat = cls()
         chat._id = data.get("_id")
         chat.datetime = data.get("datetime", datetime.now())
         return chat
