@@ -4,7 +4,7 @@ Un asistente virtual inteligente con avatar, streaming en tiempo real y análisi
 
 ## ✨ Características Principales
 
-- 🎥 **Avatar virtual** con HeyGen API
+- 💬 **Chat inteligente** con múltiples LLMs
 - 📡 **Streaming en tiempo real** (Server-Sent Events)
 - 🎤 **Reconocimiento de voz** integrado
 - 📊 **Dashboard de métricas** con análisis IA
@@ -22,7 +22,6 @@ Un asistente virtual inteligente con avatar, streaming en tiempo real y análisi
 ### APIs Requeridas
 - **Google Gemini API** - [Obtener clave](https://makersuite.google.com/app/apikey)
 - **Mistral AI API** - [Obtener clave](https://console.mistral.ai/)
-- **HeyGen API** (opcional) - [Obtener clave](https://www.heygen.com/)
 
 ## ⚡ Inicio Rápido
 
@@ -50,9 +49,6 @@ MISTRAL_API=tu_clave_de_mistral_aqui
 
 # Base de datos
 MONGO_URL=mongodb://localhost:27017
-
-# Avatar (opcional)
-HEYGEN_API=tu_clave_de_heygen_aqui
 ```
 
 ### 3. MongoDB
@@ -84,7 +80,7 @@ Una vez ejecutado el servidor:
 
 | Servicio | URL | Descripción |
 |----------|-----|-------------|
-| **🎮 Interfaz Principal** | http://localhost:8000/html/mix.html | Asistente completo con avatar |
+| **🎮 Interfaz Principal** | http://localhost:8000/html/mix.html | Asistente inteligente completo |
 | **📖 API Docs** | http://localhost:8000/docs | Documentación Swagger |
 | **🔧 Health Check** | http://localhost:8000/health | Estado del servidor |
 
@@ -100,16 +96,14 @@ Una vez ejecutado el servidor:
 ### 🔗 APIs Externas
 - **[Google Gemini](https://ai.google.dev/)** - LLM principal con streaming
 - **[Mistral AI](https://mistral.ai/)** - LLM alternativo y análisis
-- **[HeyGen](https://www.heygen.com/)** - Avatar virtual realista
 
 ## 🎯 Uso Básico
 
 ### 1. Interfaz Web (Recomendado)
 1. Abrir http://localhost:8000/html/mix.html
-2. **Opcional**: Presionar "Iniciar Avatar"
-3. Escribir pregunta o usar micrófono 🎤
-4. Ver respuesta en tiempo real con streaming
-5. Generar métricas con el botón 📊
+2. Escribir pregunta o usar micrófono 🎤
+3. Ver respuesta en tiempo real con streaming
+4. Generar métricas con el botón 📊
 
 ### 2. API REST
 ```bash
@@ -131,7 +125,6 @@ curl -X POST "http://localhost:8000/api/message/chat" \
 - **Base de datos**: MongoDB + PyMongo
 - **IA**: Google Gemini 2.5 Flash + Mistral AI
 - **Streaming**: Server-Sent Events (SSE)
-- **Avatar**: HeyGen API + LiveKit
 - **Voz**: Web Speech API
 
 ## 🚨 Solución de Problemas
@@ -146,11 +139,6 @@ sudo systemctl restart mongodb
 - Verificar claves en `.env`
 - Confirmar créditos disponibles
 - Revisar logs: `python main.py`
-
-### Avatar no funciona
-- HeyGen es opcional
-- Verificar clave API
-- Usar HTTPS en producción
 
 ### Streaming no funciona
 - Usar navegador moderno

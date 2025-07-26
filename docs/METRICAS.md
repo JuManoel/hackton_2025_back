@@ -193,23 +193,6 @@ done
 
 ---
 
-## 🎮 Uso desde la Interfaz Web
-
-### Acceso al Dashboard
-1. 🌐 **Abrir** `http://localhost:8000/html/mix.html`
-2. 💬 **Mantener** conversación con el asistente
-3. 📊 **Hacer clic** en "Generar Métricas"
-4. 👀 **Ver** dashboard completo con gráficos
-
-### Características del Dashboard
-- ⚡ **Carga en tiempo real** con indicador de progreso
-- 🎨 **Diseño moderno** con TailwindCSS
-- 📱 **Responsive** para móvil y desktop
-- 🔄 **Actualización dinámica** sin recargar página
-- ❌ **Manejo de errores** con mensajes claros
-
----
-
 ## 📊 Ejemplos de Datos
 
 ### Conversación de Alta Calidad
