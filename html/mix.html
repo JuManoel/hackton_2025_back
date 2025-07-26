@@ -125,6 +125,20 @@
                         </div>
                     </div>
 
+                    <!-- Botón de métricas debajo del historial -->
+                    <div class="mt-3 flex justify-center">
+                        <button
+                            id="metricsBtn"
+                            class="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Generar dashboard de métricas"
+                        >
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+                            </svg>
+                            <span id="metricsText">Generar Métricas</span>
+                        </button>
+                    </div>
+
                     <!-- Status del streaming -->
                     <div id="streamingStatus" class="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md hidden">
                         <div class="flex items-center text-blue-700">
@@ -143,6 +157,97 @@
         </div>
     </div>
 
+    <!-- Modal para Dashboard de Métricas -->
+    <div id="metricsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">📊 Dashboard de Métricas</h2>
+                <button id="closeMetricsBtn" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Loading estado -->
+            <div id="metricsLoading" class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                <p class="mt-2 text-gray-600">Analizando conversación...</p>
+            </div>
+
+            <!-- Contenido de métricas -->
+            <div id="metricsContent" class="hidden">
+                <!-- Resumen general -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold">Satisfacción Promedio</h3>
+                                <p id="satisfaccionPromedio" class="text-3xl font-bold">-</p>
+                            </div>
+                            <div class="text-4xl opacity-80">😊</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold">Precisión Promedio</h3>
+                                <p id="precisionPromedio" class="text-3xl font-bold">-</p>
+                            </div>
+                            <div class="text-4xl opacity-80">🎯</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos detallados -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Satisfacción por mensaje -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-3 text-gray-800">📈 Satisfacción por Mensaje</h4>
+                        <div id="satisfaccionChart" class="space-y-2"></div>
+                    </div>
+                    
+                    <!-- Precisión por mensaje -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-3 text-gray-800">📊 Precisión por Mensaje</h4>
+                        <div id="precisionChart" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- Estadísticas adicionales -->
+                <div class="mt-6 bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-3 text-gray-800">📋 Estadísticas Detalladas</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <div>
+                            <p class="text-2xl font-bold text-blue-600" id="totalMensajes">-</p>
+                            <p class="text-sm text-gray-600">Total Mensajes</p>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-green-600" id="maxSatisfaccion">-</p>
+                            <p class="text-sm text-gray-600">Máx. Satisfacción</p>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-purple-600" id="maxPrecision">-</p>
+                            <p class="text-sm text-gray-600">Máx. Precisión</p>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-orange-600" id="chatId">-</p>
+                            <p class="text-sm text-gray-600">ID del Chat</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error estado -->
+            <div id="metricsError" class="hidden text-center py-8">
+                <div class="text-red-500 text-6xl mb-4">⚠️</div>
+                <p class="text-gray-600">Error al cargar las métricas</p>
+                <p id="errorMessage" class="text-red-500 text-sm mt-2"></p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Configuration
         const API_CONFIG = {
@@ -151,7 +256,8 @@
             baseUrl: "http://localhost:8000/api",
             endpoints: {
                 chats: "/chat",
-                messages: "/message"
+                messages: "/message",
+                metricas: "/metricas"
             }
         };
 
@@ -181,6 +287,14 @@
         const avatarStatus = document.getElementById("avatarStatus");
         const debugStatus = document.getElementById("debugStatus");
         const debugContainer = document.getElementById("debugContainer");
+        
+        // Elementos del modal de métricas
+        const metricsBtn = document.getElementById("metricsBtn");
+        const metricsModal = document.getElementById("metricsModal");
+        const closeMetricsBtn = document.getElementById("closeMetricsBtn");
+        const metricsLoading = document.getElementById("metricsLoading");
+        const metricsContent = document.getElementById("metricsContent");
+        const metricsError = document.getElementById("metricsError");
 
         // Initialize Speech Recognition
         function initializeSpeechRecognition() {
@@ -331,6 +445,9 @@
                     currentChatId = data.data.id;
                     updateDebug(`Nuevo chat creado: ${currentChatId}`);
                     updateAvatarStatus(`Chat activo: ${currentChatId.slice(-6)}`, 'success');
+                    
+                    // Habilitar botón de métricas
+                    metricsBtn.disabled = false;
                     
                     // Limpiar mensajes anteriores
                     messagesList.innerHTML = `
@@ -559,6 +676,142 @@
             }
         }
 
+        // === FUNCIONES DE MÉTRICAS ===
+        
+        // Función para generar métricas
+        async function generateMetrics() {
+            if (!currentChatId) {
+                updateDebug("No hay chat activo para generar métricas");
+                alert("No hay un chat activo. Envía al menos un mensaje antes de generar métricas.");
+                return;
+            }
+
+            // Mostrar modal y loading
+            metricsModal.classList.remove('hidden');
+            metricsLoading.classList.remove('hidden');
+            metricsContent.classList.add('hidden');
+            metricsError.classList.add('hidden');
+            
+            // Deshabilitar botón mientras se cargan las métricas
+            metricsBtn.disabled = true;
+            document.getElementById('metricsText').textContent = 'Generando...';
+
+            try {
+                updateDebug(`Generando métricas para chat: ${currentChatId}`);
+                
+                const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.metricas}/${currentChatId}`);
+                const data = await response.json();
+
+                if (response.ok && data) {
+                    displayMetrics(data);
+                    updateDebug("Métricas generadas exitosamente");
+                } else {
+                    throw new Error(data.message || "Error al generar métricas");
+                }
+            } catch (error) {
+                updateDebug(`Error generando métricas: ${error.message}`);
+                showMetricsError(error.message);
+            } finally {
+                // Rehabilitar botón
+                metricsBtn.disabled = false;
+                document.getElementById('metricsText').textContent = 'Generar Métricas';
+            }
+        }
+
+        // Función para mostrar las métricas en el dashboard
+        function displayMetrics(data) {
+            // Ocultar loading y mostrar contenido
+            metricsLoading.classList.add('hidden');
+            metricsContent.classList.remove('hidden');
+
+            // Actualizar valores principales
+            document.getElementById('satisfaccionPromedio').textContent = 
+                data.satisfacion_promedio ? data.satisfacion_promedio.toFixed(1) : 'N/A';
+            document.getElementById('precisionPromedio').textContent = 
+                data.precision_promedio ? data.precision_promedio.toFixed(1) : 'N/A';
+
+            // Crear gráficos de barras simples para satisfacción
+            const satisfaccionChart = document.getElementById('satisfaccionChart');
+            satisfaccionChart.innerHTML = '';
+            
+            if (data.satisfacion && data.satisfacion.length > 0) {
+                data.satisfacion.forEach((valor, index) => {
+                    const barContainer = document.createElement('div');
+                    barContainer.className = 'flex items-center mb-3';
+                    
+                    // Normalizar el valor a escala 0-100 (asumiendo que los valores están entre 0-100)
+                    const normalizedValue = Math.min(100, Math.max(0, valor));
+                    const barWidth = normalizedValue;
+                    
+                    barContainer.innerHTML = `
+                        <span class="text-xs text-gray-600 w-16 font-medium">Msg ${index + 1}</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-6 mx-3 overflow-hidden">
+                            <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-6 rounded-full transition-all duration-500 flex items-center justify-end pr-2" style="width: ${barWidth}%">
+                                <span class="text-white text-xs font-bold">${valor}%</span>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-600 w-12 font-medium">${valor}%</span>
+                    `;
+                    satisfaccionChart.appendChild(barContainer);
+                });
+            } else {
+                satisfaccionChart.innerHTML = '<p class="text-gray-500 text-sm">No hay datos de satisfacción disponibles</p>';
+            }
+
+            // Crear gráficos de barras simples para precisión
+            const precisionChart = document.getElementById('precisionChart');
+            precisionChart.innerHTML = '';
+            
+            if (data.precision && data.precision.length > 0) {
+                data.precision.forEach((valor, index) => {
+                    const barContainer = document.createElement('div');
+                    barContainer.className = 'flex items-center mb-3';
+                    
+                    // Normalizar el valor a escala 0-100 (asumiendo que los valores están entre 0-100)
+                    const normalizedValue = Math.min(100, Math.max(0, valor));
+                    const barWidth = normalizedValue;
+                    
+                    barContainer.innerHTML = `
+                        <span class="text-xs text-gray-600 w-16 font-medium">Msg ${index + 1}</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-6 mx-3 overflow-hidden">
+                            <div class="bg-gradient-to-r from-green-500 to-green-600 h-6 rounded-full transition-all duration-500 flex items-center justify-end pr-2" style="width: ${barWidth}%">
+                                <span class="text-white text-xs font-bold">${valor}%</span>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-600 w-12 font-medium">${valor}%</span>
+                    `;
+                    precisionChart.appendChild(barContainer);
+                });
+            } else {
+                precisionChart.innerHTML = '<p class="text-gray-500 text-sm">No hay datos de precisión disponibles</p>';
+            }
+
+            // Actualizar estadísticas adicionales
+            const totalMensajes = (data.satisfacion?.length || 0) + (data.precision?.length || 0);
+            document.getElementById('totalMensajes').textContent = totalMensajes || 'N/A';
+            
+            const maxSatisfaccion = data.satisfacion?.length > 0 ? Math.max(...data.satisfacion) : 'N/A';
+            document.getElementById('maxSatisfaccion').textContent = maxSatisfaccion !== 'N/A' ? maxSatisfaccion.toFixed(1) : 'N/A';
+            
+            const maxPrecision = data.precision?.length > 0 ? Math.max(...data.precision) : 'N/A';
+            document.getElementById('maxPrecision').textContent = maxPrecision !== 'N/A' ? maxPrecision.toFixed(1) : 'N/A';
+            
+            document.getElementById('chatId').textContent = currentChatId ? currentChatId.slice(-6) : 'N/A';
+        }
+
+        // Función para mostrar error en métricas
+        function showMetricsError(errorMessage) {
+            metricsLoading.classList.add('hidden');
+            metricsContent.classList.add('hidden');
+            metricsError.classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = errorMessage;
+        }
+
+        // Función para cerrar modal de métricas
+        function closeMetricsModal() {
+            metricsModal.classList.add('hidden');
+        }
+
         // Send message and handle streaming
         async function sendMessage() {
             const text = taskInput.value.trim();
@@ -690,6 +943,10 @@
         // Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
             initializeSpeechRecognition();
+            
+            // Deshabilitar botón de métricas inicialmente
+            metricsBtn.disabled = true;
+            
             initializeChat(); // Inicializar el sistema de chat dinámico
             
             // Toggle debug view on triple click
@@ -714,6 +971,17 @@
         document.querySelector("#closeBtn").addEventListener("click", closeSession);
         micBtn.addEventListener("click", toggleSpeechRecognition);
         document.querySelector("#sendBtn").addEventListener("click", sendMessage);
+        
+        // Event listeners para métricas
+        metricsBtn.addEventListener("click", generateMetrics);
+        closeMetricsBtn.addEventListener("click", closeMetricsModal);
+        
+        // Cerrar modal al hacer clic fuera de él
+        metricsModal.addEventListener("click", (e) => {
+            if (e.target === metricsModal) {
+                closeMetricsModal();
+            }
+        });
         
         taskInput.addEventListener("keypress", (e) => {
             if (e.key === "Enter" && !e.shiftKey) {
