@@ -1,8 +1,11 @@
 from API.interface.ILLMApi import *
 import google.generativeai as genai
-from google import genai as export_pdf
 import PyPDF2
+import os
+from dotenv import load_dotenv
 
+# Cargar variables de entorno
+load_dotenv()
 
 class Gemini(ILLMApi):
     def __init__(self):
@@ -55,7 +58,7 @@ class Gemini(ILLMApi):
         WhatsApp: wa.me/573043262538
         """
 
-        system_prompt = f"""
+        self.system_prompt = f"""
         Eres Johan, agente virtual de Ingelean especializado en soluciones industriales 4.0.
 
         TONO: Profesional, empático y claro. Usa emojis y sé conciso.
@@ -74,10 +77,8 @@ class Gemini(ILLMApi):
         {self.pdf_text}
         """
         
-        self.generar_system_prompt(system_prompt)
-
         self.model = genai.GenerativeModel(self.model_name,
-                           system_instruction=self.system_prompt)
+                                           system_instruction=self.system_prompt)
 
 
     def _read_pdf(self):
@@ -89,21 +90,20 @@ class Gemini(ILLMApi):
                 for page in reader.pages:
                     text = page.extract_text()
                     if text:
-                        pdf_text += text
+                        self.pdf_text += text
         except FileNotFoundError:
             print(f"Error: El archivo no se encontró en la ruta {file_path}")
             return ""
         except Exception as e:
             print(f"Ocurrió un error al leer el PDF: {e}")
             return ""
-        return pdf_text
+        return self.pdf_text
 
-    def generar_system_prompt(self, system_prompt: str):
-            self.system_prompt = system_prompt + f"\n\nContenido del documento de la empresa:\n{getattr(self, 'pdf_content', '')}"
 
     def responder_pregunta(self, pregunta: str):
-        respuesta = self.model.generate_content([self.sample_file,pregunta])
-        return respuesta.text
+        chat = self.model.start_chat()
+        respuesta = chat.send_message(pregunta, stream=True)
+        return respuesta
 
     def _parse_contexto(self, contexto: list):
         contexto_gemini: list = []
@@ -117,5 +117,5 @@ class Gemini(ILLMApi):
     def responder_pregunta_con_contexto(self, pregunta: str, contexto: list):
         contexto_gemini = self._parse_contexto(contexto)
         chat = self.model.start_chat(history=contexto_gemini)
-        respuesta = chat.send_message(pregunta)
-        return respuesta.text
+        respuesta = chat.send_message(pregunta, stream=True)
+        return respuesta
