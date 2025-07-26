@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>HeyGen Streaming API LiveKit (V2)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+
+  <body class="bg-gray-100 font-sans">
+    <!-- Header elegante con logo IngeLean -->
+    <header class="bg-black shadow-lg">
+      <div class="max-w-6xl mx-auto px-6 py-4">
+        <div class="flex items-center justify-center">
+          <img 
+            src="./fondoIngeLean.png" 
+            alt="IngeLean Logo" 
+            class="h-12 w-auto object-contain filter brightness-110"
+          />
+        </div>
+      </div>
+    </header>
+
+    <!-- Contenido principal -->
+    <div class="p-5">
+      <div class="max-w-6xl mx-auto bg-white p-5 rounded-lg shadow-md">
+        <!-- Título y botones de control -->
+        <div class="flex justify-between items-center mb-5">
+          <h1 class="text-2xl font-bold text-gray-800">Avatar - Lambda U. Caldas</h1>
+          <div class="flex gap-2.5">
+            <button
+              id="startBtn"
+              class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Iniciar
+            </button>
+            <button
+              id="closeBtn"
+              class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-red-600 transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <!-- Layout principal - responsive -->
+        <div class="flex flex-col lg:flex-row gap-5 mb-5">
+          <!-- Columna principal: Avatar y input -->
+          <div class="flex-1">
+            <video
+              id="mediaElement"
+              class="w-full h-[400px] border rounded-lg mb-4 object-cover"
+              autoplay
+            ></video>
+
+            <!-- Chat input debajo del avatar -->
+            <div class="flex gap-2.5 mb-4 lg:mb-0">
+              <input
+                id="taskInput"
+                type="text"
+                placeholder="Escribe tu mensaje o usa la voz..."
+                class="flex-1 p-2 border border-gray-300 rounded-md"
+              />
+              <button
+                id="micBtn"
+                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-orange-500 transition-colors flex items-center justify-center"
+                title="Voz a texto"
+              >
+                <!-- Ícono de micrófono -->
+                <svg id="micIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
+                </svg>
+                <!-- Ícono de parar (oculto por defecto) -->
+                <svg id="stopIcon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path>
+                </svg>
+              </button>
+              <button
+                id="sendBtn"
+                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-orange-500 transition-colors flex items-center justify-center"
+              >
+                <!-- Ícono de avión de papel rotado horizontalmente -->
+                <svg class="w-5 h-5 rotate-90" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Panel de chat y status - responsive -->
+          <div class="w-full lg:w-96">
+            <!-- Contenedor de pestañas -->
+            <div class="mb-2">
+              <div class="flex border-b border-gray-300">
+                <button
+                  id="messagesTab"
+                  class="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600 bg-white"
+                >
+                  Mensajes
+                </button>
+                <button
+                  id="statusTab"
+                  class="px-4 py-2 font-medium text-gray-500 hover:text-gray-700 bg-gray-50"
+                >
+                  Estado
+                </button>
+              </div>
+            </div>
+
+            <!-- Contenedor de mensajes -->
+            <div
+              id="messagesContainer"
+              class="p-2.5 bg-gray-50 border border-gray-300 rounded-md h-[300px] lg:h-[400px] overflow-y-auto"
+            >
+              <div id="messagesList" class="space-y-3"></div>
+            </div>
+
+            <!-- Contenedor de estado (oculto por defecto) -->
+            <div
+              id="statusContainer"
+              class="p-2.5 bg-gray-50 border border-gray-300 rounded-md h-[300px] lg:h-[400px] overflow-y-auto font-mono text-sm hidden"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Configuration
+      const API_CONFIG = {
+        apiKey: "MzVhODNkMTk0YjliNDkxMzg0ZTZkNTcxYzkyMzI2YzItMTc1MzQyMTExNw==",
+        serverUrl: "https://api.heygen.com",
+      };
+
+      // Global variables
+      let sessionInfo = null;
+      let room = null;
+      let mediaStream = null;
+      let webSocket = null;
+      let sessionToken = null;
+
+      // Speech Recognition variables
+      let recognition = null;
+      let isRecording = false;
+
+      // DOM Elements
+      const statusElement = document.getElementById("statusContainer");
+      const messagesContainer = document.getElementById("messagesContainer");
+      const messagesList = document.getElementById("messagesList");
+      const mediaElement = document.getElementById("mediaElement");
+      const taskInput = document.getElementById("taskInput");
+      const micBtn = document.getElementById("micBtn");
+      const micIcon = document.getElementById("micIcon");
+      const stopIcon = document.getElementById("stopIcon");
+
+      // Tab elements
+      const messagesTab = document.getElementById("messagesTab");
+      const statusTab = document.getElementById("statusTab");
+
+      // Initialize Speech Recognition
+      function initializeSpeechRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          recognition = new SpeechRecognition();
+          
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = 'es-ES'; // Español
+          
+          recognition.onstart = () => {
+            isRecording = true;
+            micIcon.classList.add('hidden');
+            stopIcon.classList.remove('hidden');
+            micBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+            micBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            updateStatus("Escuchando...");
+          };
+          
+          recognition.onresult = (event) => {
+            let finalTranscript = '';
+            let interimTranscript = '';
+            
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const transcript = event.results[i][0].transcript;
+              if (event.results[i].isFinal) {
+                finalTranscript += transcript;
+              } else {
+                interimTranscript += transcript;
+              }
+            }
+            
+            // Mostrar el texto en el input
+            taskInput.value = finalTranscript + interimTranscript;
+          };
+          
+          recognition.onend = () => {
+            isRecording = false;
+            micIcon.classList.remove('hidden');
+            stopIcon.classList.add('hidden');
+            micBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+            micBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            updateStatus("Reconocimiento de voz terminado");
+          };
+          
+          recognition.onerror = (event) => {
+            updateStatus(`Error de reconocimiento de voz: ${event.error}`);
+            isRecording = false;
+            micIcon.classList.remove('hidden');
+            stopIcon.classList.add('hidden');
+            micBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+            micBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+          };
+          
+          return true;
+        } else {
+          updateStatus("Reconocimiento de voz no soportado en este navegador");
+          micBtn.disabled = true;
+          micBtn.classList.add('opacity-50', 'cursor-not-allowed');
+          return false;
+        }
+      }
+
+      // Toggle speech recognition
+      function toggleSpeechRecognition() {
+        if (!recognition) {
+          updateStatus("Reconocimiento de voz no disponible");
+          return;
+        }
+        
+        if (isRecording) {
+          recognition.stop();
+        } else {
+          taskInput.value = ''; // Limpiar el input antes de empezar
+          recognition.start();
+        }
+      }
+
+      // Helper function to update status (mantiene la lógica original)
+      function updateStatus(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        statusElement.innerHTML += `[${timestamp}] ${message}<br>`;
+        statusElement.scrollTop = statusElement.scrollHeight;
+      }
+
+      // Nueva función para agregar mensajes al chat
+      function addMessage(text, sender = 'user', type = 'message') {
+        const messageDiv = document.createElement('div');
+        const timestamp = new Date().toLocaleTimeString();
+        
+        if (sender === 'user') {
+          messageDiv.innerHTML = `
+            <div class="flex justify-end">
+              <div class="max-w-[70%] bg-blue-500 text-white p-3 rounded-lg rounded-br-sm">
+                <div class="text-sm font-medium mb-1">Tú</div>
+                <div>${text}</div>
+                <div class="text-xs opacity-75 mt-1">${timestamp}</div>
+              </div>
+            </div>
+          `;
+        } else {
+          messageDiv.innerHTML = `
+            <div class="flex justify-start">
+              <div class="max-w-[70%] bg-gray-200 text-gray-800 p-3 rounded-lg rounded-bl-sm">
+                <div class="text-sm font-medium mb-1 text-blue-600">AI Avatar</div>
+                <div>${text}</div>
+                <div class="text-xs opacity-75 mt-1">${timestamp}</div>
+              </div>
+            </div>
+          `;
+        }
+        
+        messagesList.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+
+      // Función para limpiar texto (nueva)
+      function cleanText(text) {
+        if (!text) return '';
+        return text
+          .replace(/\\n/g, ' ')
+          .replace(/\n/g, ' ')
+          .replace(/\r/g, ' ')
+          .replace(/\t/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      // Event listeners para las pestañas
+      messagesTab.addEventListener('click', () => {
+        messagesTab.className = "px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600 bg-white";
+        statusTab.className = "px-4 py-2 font-medium text-gray-500 hover:text-gray-700 bg-gray-50";
+        messagesContainer.classList.remove('hidden');
+        statusElement.classList.add('hidden');
+      });
+
+      statusTab.addEventListener('click', () => {
+        statusTab.className = "px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600 bg-white";
+        messagesTab.className = "px-4 py-2 font-medium text-gray-500 hover:text-gray-700 bg-gray-50";
+        statusElement.classList.remove('hidden');
+        messagesContainer.classList.add('hidden');
+      });
+
+      // Get session token
+      async function getSessionToken() {
+        const response = await fetch(
+          `${API_CONFIG.serverUrl}/v1/streaming.create_token`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Api-Key": API_CONFIG.apiKey,
+            },
+          }
+        );
+
+        const data = await response.json();
+        sessionToken = data.data.token;
+        updateStatus("Token de sesión obtenido");
+      }
+
+      // Connect WebSocket
+      async function connectWebSocket(sessionId) {
+        const params = new URLSearchParams({
+          session_id: sessionId,
+          session_token: sessionToken,
+          silence_response: false,
+          opening_text: "Hola, ¿cómo puedo ayudarte?",
+          stt_language: "es",
+        });
+
+        const wsUrl = `wss://${
+          new URL(API_CONFIG.serverUrl).hostname
+        }/v1/ws/streaming.chat?${params}`;
+
+        webSocket = new WebSocket(wsUrl);
+
+        // Handle WebSocket events
+        webSocket.addEventListener("message", (event) => {
+          const eventData = JSON.parse(event.data);
+          console.log("Raw WebSocket event:", eventData);
+        });
+      }
+
+      // Create new session
+      async function createNewSession() {
+        if (!sessionToken) {
+          await getSessionToken();
+        }
+
+        const response = await fetch(
+          `${API_CONFIG.serverUrl}/v1/streaming.new`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${sessionToken}`,
+            },
+            body: JSON.stringify({
+              quality: "high",
+              avatar_name: "Wayne_20240711", // Valor fijo
+              voice: {
+                voice_id: "", // Valor por defecto vacío
+                rate: 1.0,
+              },
+              version: "v2",
+              video_encoding: "H264",
+            }),
+          }
+        );
+
+        const data = await response.json();
+        sessionInfo = data.data;
+
+        // Create LiveKit Room
+        room = new LivekitClient.Room({
+          adaptiveStream: true,
+          dynacast: true,
+          videoCaptureDefaults: {
+            resolution: LivekitClient.VideoPresets.h720.resolution,
+          },
+        });
+
+        // Handle room events
+        room.on(LivekitClient.RoomEvent.DataReceived, (message) => {
+          const data = new TextDecoder().decode(message);
+          console.log("Room message:", JSON.parse(data));
+        });
+
+        // Handle media streams
+        mediaStream = new MediaStream();
+        room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
+          if (track.kind === "video" || track.kind === "audio") {
+            mediaStream.addTrack(track.mediaStreamTrack);
+            if (
+              mediaStream.getVideoTracks().length > 0 &&
+              mediaStream.getAudioTracks().length > 0
+            ) {
+              mediaElement.srcObject = mediaStream;
+              updateStatus("Stream de medios listo");
+            }
+          }
+        });
+
+        // Handle media stream removal
+        room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
+          const mediaTrack = track.mediaStreamTrack;
+          if (mediaTrack) {
+            mediaStream.removeTrack(mediaTrack);
+          }
+        });
+
+        // Handle room connection state changes
+        room.on(LivekitClient.RoomEvent.Disconnected, (reason) => {
+          updateStatus(`Sala desconectada: ${reason}`);
+        });
+
+        await room.prepareConnection(sessionInfo.url, sessionInfo.access_token);
+        updateStatus("Conexión preparada");
+
+        // Connect WebSocket after room preparation
+        await connectWebSocket(sessionInfo.session_id);
+
+        updateStatus("Sesión creada exitosamente");
+      }
+
+      // Start streaming session
+      async function startStreamingSession() {
+        const startResponse = await fetch(
+          `${API_CONFIG.serverUrl}/v1/streaming.start`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${sessionToken}`,
+            },
+            body: JSON.stringify({
+              session_id: sessionInfo.session_id,
+            }),
+          }
+        );
+
+        // Connect to LiveKit room
+        await room.connect(sessionInfo.url, sessionInfo.access_token);
+        updateStatus("Conectado a la sala");
+
+        document.querySelector("#startBtn").disabled = true;
+        updateStatus("Streaming iniciado exitosamente");
+      }
+
+      // Send text to avatar (solo usa "repeat" ahora)
+      async function sendText(text) {
+        if (!sessionInfo) {
+          updateStatus("No hay sesión activa");
+          return;
+        }
+
+        let finalText = text;
+
+        // Agregar mensaje del usuario
+        addMessage(text, 'user');
+
+        // Send to external webhook
+        try {
+          updateStatus(`Enviando al webhook: ${text}`);
+          
+          const webhookResponse = await fetch(
+            "https://8aab7b9c0b8c.ngrok-free.app/webhook/chat",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-session-Id": sessionInfo.session_id,
+              },
+              body: JSON.stringify({
+                message: text,
+              }),
+            }
+          );
+
+          const webhookData = await webhookResponse.json();
+          updateStatus(`Respuesta del webhook recibida: ${JSON.stringify(webhookData)}`);
+          
+          // Use the output from webhook as the final text
+          if (webhookData.output) {
+            finalText = cleanText(webhookData.output);
+            updateStatus(`Usando salida del webhook: ${finalText}`);
+            
+            // Agregar respuesta de la IA al chat
+            addMessage(finalText, 'ai');
+          }
+        } catch (error) {
+          updateStatus(`Error del webhook: ${error.message}`);
+          // Continue with original text if webhook fails
+        }
+
+        const response = await fetch(
+          `${API_CONFIG.serverUrl}/v1/streaming.task`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${sessionToken}`,
+            },
+            body: JSON.stringify({
+              session_id: sessionInfo.session_id,
+              text: finalText,
+              task_type: "repeat",
+            }),
+          }
+        );
+
+        updateStatus(`Texto enviado: ${finalText}`);
+      }
+
+      // Close session
+      async function closeSession() {
+        if (!sessionInfo) {
+          updateStatus("No hay sesión activa");
+          return;
+        }
+
+        const response = await fetch(
+          `${API_CONFIG.serverUrl}/v1/streaming.stop`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${sessionToken}`,
+            },
+            body: JSON.stringify({
+              session_id: sessionInfo.session_id,
+            }),
+          }
+        );
+
+        // Close WebSocket
+        if (webSocket) {
+          webSocket.close();
+        }
+        // Disconnect from LiveKit room
+        if (room) {
+          room.disconnect();
+        }
+
+        mediaElement.srcObject = null;
+        sessionInfo = null;
+        room = null;
+        mediaStream = null;
+        sessionToken = null;
+        document.querySelector("#startBtn").disabled = false;
+
+        updateStatus("Sesión cerrada");
+      }
+
+      // Función para enviar mensaje
+      function sendMessage() {
+        const text = taskInput.value.trim();
+        if (text) {
+          sendText(text);
+          taskInput.value = "";
+        }
+      }
+
+      // Initialize on page load
+      document.addEventListener('DOMContentLoaded', () => {
+        initializeSpeechRecognition();
+      });
+
+      // Event Listeners
+      document
+        .querySelector("#startBtn")
+        .addEventListener("click", async () => {
+          await createNewSession();
+          await startStreamingSession();
+        });
+      document
+        .querySelector("#closeBtn")
+        .addEventListener("click", closeSession);
+      
+      // Botón de micrófono
+      micBtn.addEventListener("click", toggleSpeechRecognition);
+      
+      // Botón de envío
+      document.querySelector("#sendBtn").addEventListener("click", sendMessage);
+      
+      // Enter key en el input
+      document.querySelector("#taskInput").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          sendMessage();
+        }
+      });
+    </script>
+  </body>
+</html>

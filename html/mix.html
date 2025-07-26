@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IngeLean AI Avatar - Streaming Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+    <style>
+        .typing-indicator {
+            display: inline-block;
+            animation: typing 1.5s infinite;
+        }
+        
+        @keyframes typing {
+            0%, 20% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        .message-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-sans">
+    <!-- Header elegante con logo IngeLean -->
+    <header class="bg-black shadow-lg">
+        <div class="max-w-6xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-center">
+                <img 
+                    src="./fondoIngeLean.png" 
+                    alt="IngeLean Logo" 
+                    class="h-12 w-auto object-contain filter brightness-110"
+                />
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido principal -->
+    <div class="p-5">
+        <div class="max-w-6xl mx-auto bg-white p-5 rounded-lg shadow-md">
+            <!-- Título y botones de control -->
+            <div class="flex justify-between items-center mb-5">
+                <h1 class="text-2xl font-bold text-gray-800">Johan - Asistente Virtual IngeLean</h1>
+                <div class="flex gap-2.5">
+                    <button
+                        id="startBtn"
+                        class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Iniciar Avatar
+                    </button>
+                    <button
+                        id="closeBtn"
+                        class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                    >
+                        Cerrar Avatar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Layout principal - responsive -->
+            <div class="flex flex-col lg:flex-row gap-5 mb-5">
+                <!-- Columna principal: Avatar y input -->
+                <div class="flex-1">
+                    <video
+                        id="mediaElement"
+                        class="w-full h-[400px] border rounded-lg mb-4 object-cover bg-gray-900"
+                        autoplay
+                        poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMzc0MTUxIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkF2YXRhciBKb2hhbjwvdGV4dD48L3N2Zz4="
+                    ></video>
+
+                    <!-- Status del avatar -->
+                    <div id="avatarStatus" class="mb-4 p-3 bg-gray-100 rounded-lg text-center">
+                        <span class="text-gray-600">Avatar desconectado - Presiona "Iniciar Avatar" para comenzar</span>
+                    </div>
+
+                    <!-- Chat input debajo del avatar -->
+                    <div class="flex gap-2.5 mb-4 lg:mb-0">
+                        <input
+                            id="taskInput"
+                            type="text"
+                            placeholder="Escribe tu pregunta a Johan..."
+                            class="flex-1 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                        <button
+                            id="micBtn"
+                            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-orange-500 transition-colors flex items-center justify-center"
+                            title="Voz a texto"
+                        >
+                            <svg id="micIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
+                            </svg>
+                            <svg id="stopIcon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                        <button
+                            id="sendBtn"
+                            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-orange-500 transition-colors flex items-center justify-center"
+                        >
+                            <svg class="w-5 h-5 rotate-90" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Panel de chat -->
+                <div class="w-full lg:w-96">
+                    <!-- Contenedor de mensajes -->
+                    <div
+                        id="messagesContainer"
+                        class="p-4 bg-gray-50 border border-gray-300 rounded-md h-[400px] overflow-y-auto"
+                    >
+                        <div id="messagesList" class="space-y-4">
+                            <div class="flex justify-start">
+                                <div class="max-w-[80%] bg-orange-500 text-white p-3 rounded-lg rounded-bl-sm">
+                                    <div class="font-semibold text-sm mb-1">Johan - IngeLean</div>
+                                    <div>¡Hola! Soy Johan, tu asistente virtual de IngeLean. ¿En qué puedo ayudarte hoy? 😊</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status del streaming -->
+                    <div id="streamingStatus" class="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md hidden">
+                        <div class="flex items-center text-blue-700">
+                            <span class="typing-indicator mr-2">●</span>
+                            <span>Johan está escribiendo...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debug status (oculto por defecto) -->
+            <div id="debugContainer" class="mt-4 p-3 bg-gray-100 rounded-md hidden">
+                <h3 class="font-bold mb-2">Debug Status:</h3>
+                <div id="debugStatus" class="text-sm font-mono"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_CONFIG = {
+            apiKey: "YjdhZDQ1YmM0ODc0NDM3MzhlNzM3MDliNTJhMTEyZWYtMTc1MzQxOTk0OQ==",
+            serverUrl: "https://api.heygen.com",
+            localApiUrl: "http://localhost:8000/api/message/chat"
+        };
+
+        // Global variables
+        let sessionInfo = null;
+        let room = null;
+        let mediaStream = null;
+        let webSocket = null;
+        let sessionToken = null;
+        let isAvatarConnected = false;
+        let isStreaming = false;
+
+        // Speech Recognition variables
+        let recognition = null;
+        let isRecording = false;
+
+        // DOM Elements
+        const mediaElement = document.getElementById("mediaElement");
+        const taskInput = document.getElementById("taskInput");
+        const micBtn = document.getElementById("micBtn");
+        const micIcon = document.getElementById("micIcon");
+        const stopIcon = document.getElementById("stopIcon");
+        const messagesList = document.getElementById("messagesList");
+        const messagesContainer = document.getElementById("messagesContainer");
+        const streamingStatus = document.getElementById("streamingStatus");
+        const avatarStatus = document.getElementById("avatarStatus");
+        const debugStatus = document.getElementById("debugStatus");
+        const debugContainer = document.getElementById("debugContainer");
+
+        // Initialize Speech Recognition
+        function initializeSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'es-ES';
+                
+                recognition.onstart = () => {
+                    isRecording = true;
+                    micIcon.classList.add('hidden');
+                    stopIcon.classList.remove('hidden');
+                    micBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                    micBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                    updateDebug("Reconocimiento de voz iniciado");
+                };
+                
+                recognition.onresult = (event) => {
+                    let finalTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        }
+                    }
+                    if (finalTranscript) {
+                        taskInput.value = finalTranscript;
+                    }
+                };
+                
+                recognition.onend = () => {
+                    isRecording = false;
+                    micIcon.classList.remove('hidden');
+                    stopIcon.classList.add('hidden');
+                    micBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                    micBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                };
+                
+                recognition.onerror = (event) => {
+                    updateDebug(`Error de reconocimiento: ${event.error}`);
+                    isRecording = false;
+                    micIcon.classList.remove('hidden');
+                    stopIcon.classList.add('hidden');
+                    micBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                    micBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                };
+                
+                return true;
+            } else {
+                micBtn.disabled = true;
+                micBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                return false;
+            }
+        }
+
+        // Toggle speech recognition
+        function toggleSpeechRecognition() {
+            if (!recognition) return;
+            
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                taskInput.value = '';
+                recognition.start();
+            }
+        }
+
+        // Update debug status
+        function updateDebug(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugStatus.innerHTML += `[${timestamp}] ${message}<br>`;
+            debugStatus.scrollTop = debugStatus.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        // Update avatar status
+        function updateAvatarStatus(status, type = 'info') {
+            const colors = {
+                'success': 'bg-green-100 text-green-700',
+                'error': 'bg-red-100 text-red-700',
+                'warning': 'bg-yellow-100 text-yellow-700',
+                'info': 'bg-gray-100 text-gray-600'
+            };
+            
+            avatarStatus.className = `mb-4 p-3 rounded-lg text-center ${colors[type]}`;
+            avatarStatus.innerHTML = `<span>${status}</span>`;
+        }
+
+        // Add message to chat
+        function addMessage(text, sender = 'user', isTyping = false) {
+            const messageDiv = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            if (sender === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="flex justify-end">
+                        <div class="max-w-[80%] bg-blue-500 text-white p-3 rounded-lg rounded-br-sm">
+                            <div class="font-semibold text-sm mb-1">Tú</div>
+                            <div class="message-content">${text}</div>
+                            <div class="text-xs opacity-70 mt-1">${timestamp}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="flex justify-start">
+                        <div class="max-w-[80%] bg-orange-500 text-white p-3 rounded-lg rounded-bl-sm">
+                            <div class="font-semibold text-sm mb-1">Johan - IngeLean</div>
+                            <div class="message-content" id="response-content-${Date.now()}">${isTyping ? '' : text}</div>
+                            <div class="text-xs opacity-70 mt-1">${timestamp}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            messagesList.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            return messageDiv.querySelector('.message-content');
+        }
+
+        // Clean text for avatar speech
+        function cleanText(text) {
+            if (!text) return '';
+            return text
+                .replace(/[*#_~`]/g, '') // Remove markdown
+                .replace(/\n/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // Get session token for HeyGen
+        async function getSessionToken() {
+            try {
+                const response = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.create_token`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Api-Key": API_CONFIG.apiKey,
+                    },
+                });
+
+                const data = await response.json();
+                sessionToken = data.data.token;
+                updateDebug("Token de sesión HeyGen obtenido");
+                return true;
+            } catch (error) {
+                updateDebug(`Error obteniendo token: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Create new HeyGen session
+        async function createNewSession() {
+            if (!sessionToken) {
+                const tokenSuccess = await getSessionToken();
+                if (!tokenSuccess) return false;
+            }
+
+            try {
+                const response = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.new`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${sessionToken}`,
+                    },
+                    body: JSON.stringify({
+                        quality: "high",
+                        avatar_name: "Wayne_20240711",
+                        voice: { rate: 1.0 },
+                        version: "v2",
+                        video_encoding: "H264",
+                    }),
+                });
+
+                const data = await response.json();
+                sessionInfo = data.data;
+
+                // Create LiveKit Room
+                room = new LivekitClient.Room({
+                    adaptiveStream: true,
+                    dynacast: true,
+                    videoCaptureDefaults: {
+                        resolution: LivekitClient.VideoPresets.h720.resolution,
+                    },
+                });
+
+                // Handle media streams
+                mediaStream = new MediaStream();
+                room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
+                    if (track.kind === "video" || track.kind === "audio") {
+                        mediaStream.addTrack(track.mediaStreamTrack);
+                        if (mediaStream.getVideoTracks().length > 0 && mediaStream.getAudioTracks().length > 0) {
+                            mediaElement.srcObject = mediaStream;
+                            updateDebug("Stream de medios configurado");
+                        }
+                    }
+                });
+
+                room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
+                    const mediaTrack = track.mediaStreamTrack;
+                    if (mediaTrack) {
+                        mediaStream.removeTrack(mediaTrack);
+                    }
+                });
+
+                room.on(LivekitClient.RoomEvent.Disconnected, (reason) => {
+                    updateDebug(`Avatar desconectado: ${reason}`);
+                    isAvatarConnected = false;
+                    updateAvatarStatus("Avatar desconectado", 'error');
+                });
+
+                await room.prepareConnection(sessionInfo.url, sessionInfo.access_token);
+                updateDebug("Sesión HeyGen creada exitosamente");
+                return true;
+            } catch (error) {
+                updateDebug(`Error creando sesión: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Start streaming session
+        async function startStreamingSession() {
+            try {
+                const startResponse = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.start`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${sessionToken}`,
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionInfo.session_id,
+                    }),
+                });
+
+                await room.connect(sessionInfo.url, sessionInfo.access_token);
+                isAvatarConnected = true;
+                updateAvatarStatus("✅ Avatar conectado y listo", 'success');
+                updateDebug("Avatar iniciado exitosamente");
+                document.querySelector("#startBtn").disabled = true;
+                return true;
+            } catch (error) {
+                updateDebug(`Error iniciando avatar: ${error.message}`);
+                updateAvatarStatus("❌ Error conectando avatar", 'error');
+                return false;
+            }
+        }
+
+        // Send text to avatar
+        async function sendToAvatar(text) {
+            if (!sessionInfo || !isAvatarConnected) {
+                updateDebug("Avatar no conectado, no se puede enviar texto");
+                return false;
+            }
+
+            try {
+                const cleanedText = cleanText(text);
+                const response = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.task`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${sessionToken}`,
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionInfo.session_id,
+                        text: cleanedText,
+                        task_type: "repeat",
+                    }),
+                });
+
+                updateDebug(`Texto enviado al avatar: ${cleanedText}`);
+                return true;
+            } catch (error) {
+                updateDebug(`Error enviando al avatar: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Send message and handle streaming
+        async function sendMessage() {
+            const text = taskInput.value.trim();
+            if (!text || isStreaming) return;
+
+            isStreaming = true;
+            taskInput.value = "";
+            
+            // Add user message
+            addMessage(text, 'user');
+            
+            // Show typing indicator
+            streamingStatus.classList.remove('hidden');
+            const responseContainer = addMessage('', 'assistant', true);
+            
+            let fullResponse = '';
+
+            try {
+                // Start streaming from local API
+                const response = await fetch(API_CONFIG.localApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: text })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data.trim() === '') continue;
+
+                            try {
+                                const parsedData = JSON.parse(data);
+                                
+                                if (parsedData.type === 'content') {
+                                    fullResponse += parsedData.content;
+                                    responseContainer.textContent = fullResponse;
+                                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                                } else if (parsedData.type === 'done') {
+                                    // Streaming completed, send to avatar
+                                    updateDebug("Streaming completado, enviando al avatar...");
+                                    if (isAvatarConnected && fullResponse) {
+                                        await sendToAvatar(fullResponse);
+                                    }
+                                } else if (parsedData.type === 'error') {
+                                    throw new Error(parsedData.error);
+                                }
+                            } catch (e) {
+                                if (data !== '[DONE]') {
+                                    console.error('Error parsing JSON:', e);
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                responseContainer.textContent = `Error: ${error.message}`;
+                updateDebug(`Error en streaming: ${error.message}`);
+            } finally {
+                isStreaming = false;
+                streamingStatus.classList.add('hidden');
+            }
+        }
+
+        // Close session
+        async function closeSession() {
+            if (!sessionInfo) return;
+
+            try {
+                await fetch(`${API_CONFIG.serverUrl}/v1/streaming.stop`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${sessionToken}`,
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionInfo.session_id,
+                    }),
+                });
+
+                if (webSocket) webSocket.close();
+                if (room) room.disconnect();
+
+                mediaElement.srcObject = null;
+                sessionInfo = null;
+                room = null;
+                mediaStream = null;
+                sessionToken = null;
+                isAvatarConnected = false;
+                
+                document.querySelector("#startBtn").disabled = false;
+                updateAvatarStatus("Avatar desconectado", 'info');
+                updateDebug("Sesión cerrada exitosamente");
+            } catch (error) {
+                updateDebug(`Error cerrando sesión: ${error.message}`);
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSpeechRecognition();
+            
+            // Toggle debug view on triple click
+            let clickCount = 0;
+            document.addEventListener('click', () => {
+                clickCount++;
+                setTimeout(() => { clickCount = 0; }, 1000);
+                if (clickCount === 3) {
+                    debugContainer.classList.toggle('hidden');
+                }
+            });
+        });
+
+        document.querySelector("#startBtn").addEventListener("click", async () => {
+            updateAvatarStatus("🔄 Conectando avatar...", 'warning');
+            const sessionCreated = await createNewSession();
+            if (sessionCreated) {
+                await startStreamingSession();
+            }
+        });
+
+        document.querySelector("#closeBtn").addEventListener("click", closeSession);
+        micBtn.addEventListener("click", toggleSpeechRecognition);
+        document.querySelector("#sendBtn").addEventListener("click", sendMessage);
+        
+        taskInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,34 +1,65 @@
-from API.Gemini import Gemini
 from dotenv import load_dotenv
-
-# Cargar variables de entorno
 load_dotenv()
 
-try:
-    gemini = Gemini()
-    # Contexto rápido con 3 preguntas y respuestas
-    contexto = [
-        {"role": "user", "content": "¿Qué servicios ofrece Ingelean? me llamo Juan"},
-        {"role": "model", "content": "Hola Juan, gracias por entrar en contacto con nosotros.Ingelean ofrece consultoría en ingeniería, desarrollo de software y automatización industrial."},
-        {"role": "user", "content": "¿En qué sectores trabaja Ingelean?"},
-        {"role": "model", "content": "Trabajamos principalmente en manufactura, energía y tecnología."},
-        {"role": "user", "content": "¿Cómo puedo contactar a Ingelean?"},
-        {"role": "model", "content": "Puedes contactarnos a través de nuestro sitio web o llamando al +57 300 123 4567."}
-    ]
-    import time
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.src.controller.ControllerChat import ControllerChat
+from app.src.controller.ControllerMessage import ControllerMessage
+from app.src.database.connection import db_connection
 
-    start_time = time.time()
-    respuesta = gemini.responder_pregunta_con_contexto("Cual es el diferencial de la empresa?", contexto)
-    
-    first_chunk = True
-    for chunk in respuesta:
-        if first_chunk:
-            end_time = time.time()
-            delta_time = end_time - start_time
-            print(f"Delta time to first chunk: {delta_time:.4f} seconds")
-            first_chunk = False
-        print(chunk.text)
-except Exception as e:
-    print(f"Error: {e}")
-    import traceback
-    traceback.print_exc()
+# Crear la aplicación FastAPI
+app = FastAPI(
+    title="Hackaton Chat API",
+    description="API para gestionar chats y mensajes con MongoDB",
+    version="1.0.0"
+)
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # En producción, especificar dominios permitidos
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Inicializar controladores
+chat_controller = ControllerChat()
+message_controller = ControllerMessage()
+
+# Registrar rutas
+app.include_router(chat_controller.get_router())
+app.include_router(message_controller.get_router())
+
+@app.get("/")
+async def root():
+    """Endpoint de prueba"""
+    return {
+        "message": "Hackaton Chat API",
+        "status": "active",
+        "version": "1.0.0"
+    }
+
+@app.get("/health")
+async def health_check():
+    """Endpoint para verificar el estado de la aplicación"""
+    try:
+        # Verificar conexión a MongoDB
+        db = db_connection.get_database()
+        db.command("ping")
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "message": "Todos los servicios funcionando correctamente"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "database": "disconnected",
+            "error": str(e)
+        }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="localhost", port=8000)

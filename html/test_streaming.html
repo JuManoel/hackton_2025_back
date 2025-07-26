@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Streaming Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .input-section {
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .response-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            min-height: 200px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Test Streaming Chat - Ingelean</h1>
+        
+        <div class="input-section">
+            <textarea id="messageInput" placeholder="Escribe tu pregunta aquí... Ejemplo: ¿Qué servicios ofrece Ingelean?"></textarea>
+            <br><br>
+            <button id="sendButton" onclick="sendMessage()">Enviar Pregunta</button>
+            <button onclick="clearResponse()">Limpiar</button>
+        </div>
+
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <div class="response-section">
+            <div id="response">Aquí aparecerá la respuesta en tiempo real...</div>
+        </div>
+    </div>
+
+    <script>
+        let isStreaming = false;
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function hideStatus() {
+            document.getElementById('status').style.display = 'none';
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const responseDiv = document.getElementById('response');
+            const sendButton = document.getElementById('sendButton');
+            
+            const message = input.value.trim();
+            if (!message) {
+                alert('Por favor escribe una pregunta');
+                return;
+            }
+
+            if (isStreaming) {
+                alert('Ya hay una consulta en proceso...');
+                return;
+            }
+
+            // Preparar UI
+            isStreaming = true;
+            sendButton.disabled = true;
+            responseDiv.textContent = '';
+            showStatus('Conectando con Johan (Ingelean AI)...', 'loading');
+
+            try {
+                const response = await fetch('http://localhost:8000/api/message/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: message
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                showStatus('Recibiendo respuesta...', 'loading');
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data.trim() === '') continue;
+                            
+                            try {
+                                const parsedData = JSON.parse(data);
+                                
+                                if (parsedData.type === 'content') {
+                                    responseDiv.textContent += parsedData.content;
+                                } else if (parsedData.type === 'done') {
+                                    showStatus('✅ Respuesta completada', 'success');
+                                } else if (parsedData.type === 'error') {
+                                    throw new Error(parsedData.error);
+                                }
+                            } catch (e) {
+                                if (data !== '[DONE]') {
+                                    console.error('Error parsing JSON:', e);
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+            } finally {
+                isStreaming = false;
+                sendButton.disabled = false;
+                setTimeout(hideStatus, 3000);
+            }
+        }
+
+        function clearResponse() {
+            document.getElementById('response').textContent = 'Aquí aparecerá la respuesta en tiempo real...';
+            document.getElementById('messageInput').value = '';
+            hideStatus();
+        }
+
+        // Permitir enviar con Enter
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
