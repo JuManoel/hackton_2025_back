@@ -6,18 +6,15 @@ Un asistente virtual inteligente con avatar, streaming en tiempo real y análisi
 
 - 💬 **Chat inteligente** con múltiples LLMs
 - 📡 **Streaming en tiempo real** (Server-Sent Events)
-- 🎤 **Reconocimiento de voz** integrado
 - 📊 **Dashboard de métricas** con análisis IA
 - 💾 **Base de datos MongoDB** para persistencia
 - 🤖 **Múltiples LLMs** (Gemini, Mistral)
-- 🌐 **Interfaz web completa** responsive
 
 ## 📋 Requisitos
 
 ### Sistema
 - **Python 3.12+**
 - **MongoDB 4.4+**
-- **Navegador moderno** (Chrome, Firefox, Edge)
 
 ### APIs Requeridas
 - **Google Gemini API** - [Obtener clave](https://makersuite.google.com/app/apikey)
@@ -80,7 +77,6 @@ Una vez ejecutado el servidor:
 
 | Servicio | URL | Descripción |
 |----------|-----|-------------|
-| **🎮 Interfaz Principal** | http://localhost:8000/html/mix.html | Asistente inteligente completo |
 | **📖 API Docs** | http://localhost:8000/docs | Documentación Swagger |
 | **🔧 Health Check** | http://localhost:8000/health | Estado del servidor |
 
@@ -99,13 +95,7 @@ Una vez ejecutado el servidor:
 
 ## 🎯 Uso Básico
 
-### 1. Interfaz Web (Recomendado)
-1. Abrir http://localhost:8000/html/mix.html
-2. Escribir pregunta o usar micrófono 🎤
-3. Ver respuesta en tiempo real con streaming
-4. Generar métricas con el botón 📊
-
-### 2. API REST
+### 1. API REST
 ```bash
 # Crear chat
 curl -X POST "http://localhost:8000/api/chat/" \
@@ -125,7 +115,6 @@ curl -X POST "http://localhost:8000/api/message/chat" \
 - **Base de datos**: MongoDB + PyMongo
 - **IA**: Google Gemini 2.5 Flash + Mistral AI
 - **Streaming**: Server-Sent Events (SSE)
-- **Voz**: Web Speech API
 
 ## 🚨 Solución de Problemas
 
@@ -149,7 +138,6 @@ sudo systemctl restart mongodb
 
 ```
 hackton2025/
-├── 🌐 html/mix.html              # Interfaz principal
 ├── 🤖 API/                       # Integraciones LLM
 ├── 📱 app/src/                   # Backend FastAPI
 ├── 📚 docs/                      # Documentación APIs
