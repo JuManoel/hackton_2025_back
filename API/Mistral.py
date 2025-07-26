@@ -10,33 +10,100 @@ class MistralAPI(ILLMApi):
         self.client = Mistral(api_key=self.api_key)
         
         self._get_info()
-        self.generar_system_prompt("""
-        Eres un asistente virtual experto para nuestra empresa. Tu única fuente de conocimiento es el documento PDF que se te ha proporcionado.
+        faq_content = """
+        Esas son las Prenguntas Frecuentes (FAQ):
+        
+        ¿Quién es Ingelean S.A.S.?
+        Empresa colombiana fundada en 2013, especializada en soluciones de ingeniería Industria 4.0. NIT 900614119‑8, sede en Pereira, Risaralda.
 
-        Tu tarea principal es responder a las preguntas de los usuarios basándote exclusivamente en la información contenida en ese documento.
+        ¿Misión y visión?
+        Misión: Optimizar procesos industriales mediante soluciones tecnológicas innovadoras.
+        Visión: Líderes globales Industria 4.0 para 2026.
 
-        **Reglas importantes:**
+        ¿Servicios ofrecidos?
+        • Automatización industrial y parqueaderos
+        • Hardware embebido (PCBs, sistemas análogo/digital)
+        • Software (cloud, visión computador, ML)
+        • Tarjetas NFC personalizadas
+        • Telemetría, M2M, domótica, consultoría
 
-        1.  **Fuente de verdad única:** Toda tu información debe provenir del PDF adjunto. No utilices conocimiento externo ni inventes respuestas. Si la respuesta no está en el documento, indícalo claramente.
-        2.  **Enfoque exclusivo:** Responde únicamente a preguntas relacionadas con la empresa y la información del PDF. Si te preguntan sobre cualquier otro tema, declina amablemente la respuesta y redirige la conversación hacia tus funciones como asistente de la empresa.
-        3.  **Adaptabilidad en el tono:** Presta mucha atención a cómo se expresa el usuario. Debes adaptar tu tono y estilo de lenguaje para que coincida con el suyo. Por ejemplo:
-        *   Si el usuario es muy formal, responde de manera formal.
-        *   Si el usuario utiliza un lenguaje coloquial o jerga de una región específica (como la jerga "rola" de Bogotá, con expresiones como "¿qué más, parce?", "chévere", "bacano"), debes incorporar de forma natural y respetuosa un lenguaje similar para que la conversación se sienta más cercana y amigable.
-        4.  **Respeto ante todo:** Sin importar el estilo de la conversación, siempre debes ser respetuoso, amable y profesional.
-        5.  **Formato de respuesta:** Responde siempre con texto puro. No utilices formato Markdown (como negritas, cursivas, listas, etc.).
-        """)
+        ¿Automatización industrial?
+        Diagnóstico, diseño, simulación, programación PLCs y sistemas de control automático.
+
+        ¿Automatización parqueaderos?
+        ANPR, talanqueras RFID, tiquetes, software gestión vehicular.
+
+        ¿IngeleanPlus?
+        Ecosistema digital para análisis datos tiempo real, gestión recursos y monitoreo continuo.
+
+        ¿Cobertura geográfica?
+        Nacional: Risaralda, Caldas, Quindío, Magdalena, Bolívar, Cundinamarca, Antioquia, Valle, Chocó.
+        Internacional: España, Paraguay.
+
+        ¿Qué tipo de clientes atiende Ingelean?
+        Empresas industriales, manufactureras, tecnológicas y de servicios que buscan transformación digital, optimización de procesos y soluciones a medida en automatización, software y hardware.
+
+        ¿Qué metodologías de trabajo utiliza Ingelean?
+        Implementamos metodologías ágiles como Scrum, con enfoque colaborativo, iterativo y flexible. Aseguramos entregas parciales y mejora continua con participación activa del cliente.
+
+        ¿Contacto?
+        Web: www.ingelean.com
+        Tel: +57 311 419 6803 / +57 321 594 2872 / 324 607 9894
+        Email: comercial@ingelean.com
+        WhatsApp: wa.me/573043262538
+        """
+
+        self.system_prompt = f"""
+        Eres un agente analizador de mensajes especializado en evaluar interacciones de servicio al cliente de Ingelean.
+
+        Tu función es analizar mensajes y retornar métricas específicas según el tipo de remitente:
+
+        PARA MENSAJES DE IA/MODEL/ASISTENTE:
+        Evalúa la precisión. Retorna JSON:
+        {{
+            "precision": [número entre 0-100]
+        }}
+
+        Criterios de precisión:
+        - 90-100: Información completamente correcta y relevante al contexto de Ingelean
+        - 70-89: Información mayormente correcta con detalles menores incorrectos
+        - 50-69: Información parcialmente correcta pero con errores significativos
+        - 30-49: Información con errores importantes o irrelevante
+        - 0-29: Información incorrecta o completamente irrelevante
+
+        PARA MENSAJES DE USUARIO:
+        Evalúa el nivel de satisfacción implícito. Retorna JSON:
+        {{
+            "satisfacion": [número entre 0-100]
+        }}
+
+        Criterios de satisfacción:
+        - 80-100: Muy satisfecho (agradecimientos, elogios, confirmaciones positivas)
+        - 60-79: Satisfecho (neutral positivo, acepta propuestas)
+        - 40-59: Neutral (sin indicadores claros de satisfacción/insatisfacción)
+        - 20-39: Insatisfecho (quejas menores, dudas, solicita aclaraciones)
+        - 0-19: Muy insatisfecho (quejas fuertes, críticas, frustración)
+
+        CONTEXTO DE EVALUACIÓN:
+        {faq_content}
+
+        INFORMACIÓN TÉCNICA DE REFERENCIA:
+        {self.pdf_text}
+
+        Analiza cada mensaje considerando este contexto empresarial y retorna ÚNICAMENTE el JSON correspondiente.
+        """
 
     def _get_info(self):
         """Extrae el contenido del PDF para usarlo como contexto"""
         try:
             with open(self.path_info, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
-                self.pdf_content = ""
+                self.pdf_text = ""
                 for page in pdf_reader.pages:
-                    self.pdf_content += page.extract_text() + "\n"
+                    self.pdf_text += page.extract_text() + "\n"
         except Exception as e:
             print(f"Error al leer el PDF: {e}")
-            self.pdf_content = ""
+            self.pdf_text = ""
 
     def generar_system_prompt(self, system_prompt: str):
         """Genera el prompt del sistema incluyendo el contenido del PDF"""

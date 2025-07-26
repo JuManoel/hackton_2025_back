@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import Dict
 from app.src.models.Chat import Chat
 from app.src.repository.RepositoryChat import RepositoryChat
 from app.src.repository.RepositoryMessage import RepositoryMessage

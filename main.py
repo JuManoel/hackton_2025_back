@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.src.controller.ControllerChat import ControllerChat
 from app.src.controller.ControllerMessage import ControllerMessage
+from app.src.controller.ControllerMetricas import ControllerMetricas
 from app.src.database.connection import db_connection
 
 # Crear la aplicación FastAPI
@@ -26,10 +27,12 @@ app.add_middleware(
 # Inicializar controladores
 chat_controller = ControllerChat()
 message_controller = ControllerMessage()
+metricas_controller = ControllerMetricas()
 
 # Registrar rutas
 app.include_router(chat_controller.get_router())
 app.include_router(message_controller.get_router())
+app.include_router(metricas_controller.get_router())
 
 @app.get("/")
 async def root():

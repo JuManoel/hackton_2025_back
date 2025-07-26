@@ -1,10 +1,9 @@
-from typing import List, Optional, Dict
+from typing import List, Dict
 from bson import ObjectId
 from app.src.models.Message import Message
 from app.src.repository.RepositoryMessage import RepositoryMessage
 from app.src.repository.RepositoryChat import RepositoryChat
 from API.Gemini import Gemini
-from API.Mistral import MistralAPI
 import asyncio
 
 
